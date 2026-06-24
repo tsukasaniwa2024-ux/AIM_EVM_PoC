@@ -2,10 +2,78 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>EVM 輸入帳票自動化システム</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCR解析・計算ツール</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <h1>EVM 輸入帳票自動化システム</h1>
-  <p>環境構築確認用ページ</p>
+  <main class="container">
+    <h1>OCR解析・計算ツール</h1>
+
+    <section id="process-card" class="card" aria-labelledby="upload-heading">
+      <h2 id="upload-heading" class="section-title">帳票ファイル</h2>
+
+      <div class="mock-mode">
+        <label for="mock-mode">
+          <input type="checkbox" id="mock-mode" checked>
+          モックモード（バックエンドを使用しない）
+        </label>
+        <p>チェックを外すと実際のAPIへ接続します。</p>
+      </div>
+
+      <div class="form-group">
+        <label for="pdf-file">PDFファイル <span class="required">必須</span></label>
+        <div id="pdf-drop-zone" class="drop-zone">
+          <span class="drop-zone-text">ここにPDFをドロップ、またはファイルを選択</span>
+          <input type="file" id="pdf-file" accept=".pdf,application/pdf" aria-describedby="pdf-file-name">
+          <span id="pdf-file-name" class="file-name" aria-live="polite">選択されていません</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="image-file">画像ファイル <span class="required">必須</span></label>
+        <div id="image-drop-zone" class="drop-zone">
+          <span class="drop-zone-text">ここに画像をドロップ、またはファイルを選択</span>
+          <input type="file" id="image-file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" aria-describedby="image-file-name">
+          <span id="image-file-name" class="file-name" aria-live="polite">選択されていません</span>
+        </div>
+      </div>
+
+      <div class="button-area">
+        <button id="run-btn" disabled>OCR解析・計算実行</button>
+      </div>
+
+      <div id="loading" class="loading hidden" role="status" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>処理中...</span>
+      </div>
+
+      <div id="error-message" class="error-message hidden" role="alert" aria-live="assertive"></div>
+      <div id="warnings" class="warnings hidden" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card result-area">
+      <h2>計算結果プレビュー</h2>
+
+      <table id="result-table" class="hidden">
+        <caption class="visually-hidden">OCR解析と計算の結果</caption>
+        <thead>
+          <tr>
+            <th>項目名</th>
+            <th>値</th>
+            <th>抽出元</th>
+          </tr>
+        </thead>
+        <tbody id="result-body"></tbody>
+      </table>
+
+      <div class="button-area export-buttons">
+        <button id="csv-btn" disabled>CSVで出力</button>
+        <button id="excel-btn" disabled>Excelで出力</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
 </body>
 </html>
