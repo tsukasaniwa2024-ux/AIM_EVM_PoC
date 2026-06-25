@@ -220,22 +220,21 @@ function renderResult(basicInfo, items) {
       </tr>
     `).join('');
 
-  // 下部：品目明細
-  itemsBody.innerHTML = items.map((item) => `
-    <tr>
-      <td>${escapeHtml(String(item.item_no ?? ''))}</td>
-      <td>${escapeHtml(String(item.description ?? ''))}</td>
-      <td>${escapeHtml(String(item.hs_code ?? ''))}</td>
-      <td>${escapeHtml(String(item.quantity ?? ''))}</td>
-      <td>${escapeHtml(String(item.unit_price ?? ''))}</td>
-      <td>${escapeHtml(String(item.amount ?? ''))}</td>
-      <td>${escapeHtml(String(item.quantity_box ?? ''))}</td>
-      <td>${escapeHtml(String(item.quantity_piece ?? ''))}</td>
-      <td>${escapeHtml(String(item.net_weight ?? ''))}</td>
-      <td>${escapeHtml(String(item.gross_weight ?? ''))}</td>
-      <td>${escapeHtml(String(item.volume_m3 ?? ''))}</td>
-    </tr>
-  `).join('');
+  // 下部：品目明細（カラムを動的に生成）
+  if (items.length > 0) {
+    const itemKeys = Object.keys(items[0]);
+
+    // ヘッダーを動的生成
+    const thead = document.querySelector('#items-table thead tr');
+    thead.innerHTML = itemKeys.map(k => `<th>${escapeHtml(k)}</th>`).join('');
+
+    // 行を動的生成
+    itemsBody.innerHTML = items.map(item =>
+      `<tr>${itemKeys.map(k => `<td>${escapeHtml(String(item[k] ?? ''))}</td>`).join('')}</tr>`
+    ).join('');
+  } else {
+    itemsBody.innerHTML = '<tr><td colspan="11">品目明細なし</td></tr>';
+  }
 
   resultArea.classList.remove('hidden');
 
