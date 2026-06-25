@@ -78,7 +78,7 @@ async def process(
         "value_type": "float"
     })
 
-    warnings = [f["key"] for f in fields if f["value"] is None]
+    warnings = [f"「{f["key"]}」が抽出できませんでした" for f in fields if f["value"] is None]
 
     # C担当: DBに保存
     session_record = create_session(
