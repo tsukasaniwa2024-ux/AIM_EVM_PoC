@@ -338,12 +338,14 @@ function getFileNameFromResponse(res) {
 
 
 // 金額系キーにカンマ区切りを適用
-const AMOUNT_KEYS = ['amount', 'unit_price', 'total_amount', 'total_cny', 'total_jpy', 'import_total_jpy'];
+const AMOUNT_KEYS = ['unit_price', 'total_amount', 'total_cny', 'total_jpy', 'import_total_jpy'];
 
 function formatValue(key, value) {
   if (value === null || value === undefined || value === '') return '抽出できず';
+  // 整形済み文字列（例: "11,000,000円"）はそのまま返す
+  if (typeof value === 'string' && value.includes('円')) return value;
   if (AMOUNT_KEYS.some(k => key.toLowerCase().includes(k))) {
-    const num = parseFloat(value);
+    const num = parseFloat(String(value).replace(/,/g, ''));
     if (!isNaN(num)) return num.toLocaleString();
   }
   return String(value);
