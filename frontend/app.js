@@ -341,7 +341,7 @@ function getFileNameFromResponse(res) {
 const AMOUNT_KEYS = ['amount', 'unit_price', 'total_amount', 'total_cny', 'total_jpy', 'import_total_jpy'];
 
 function formatValue(key, value) {
-  if (value === null || value === undefined || value === '') return '';
+  if (value === null || value === undefined || value === '') return '抽出できず';
   if (AMOUNT_KEYS.some(k => key.toLowerCase().includes(k))) {
     const num = parseFloat(value);
     if (!isNaN(num)) return num.toLocaleString();
