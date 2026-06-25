@@ -16,7 +16,6 @@ from services.ocr.base import get_ocr_provider
 from services.extractor import merge
 from output.exporter import export_csv, export_excel
 
-# テーブル自動作成
 ImportSession.metadata.create_all(bind=engine)
 ImportField.metadata.create_all(bind=engine)
 
@@ -47,13 +46,15 @@ async def process(
     image_data = ocr.extract(image_bytes, image_file.content_type)
 
     # B担当: マージ
-    fields = merge(pdf_data, image_data)
+    merged = merge(pdf_data, image_data)
+    basic_info = merged["basic_info"]  # list[dict]
+    items = merged["items"]            # list[dict]
 
     # 為替レートの決定（優先順位: PDF → 画像 → UI入力）
     rate = None
     rate_source = None
 
-    for field in fields:
+    for field in basic_info:
         if field["key"] == "exchange_rate" and field["value"] is not None:
             rate = float(field["value"])
             rate_source = field["source"]
@@ -69,16 +70,14 @@ async def process(
             "message": "為替レートが取得できませんでした。UIから手動入力してください。"
         }
 
-    # 為替レートをfieldsに上書き
-    fields = [f for f in fields if f["key"] != "exchange_rate"]
-    fields.append({
+    # 為替レートをbasic_infoに追加
+    basic_info = [f for f in basic_info if f["key"] != "exchange_rate"]
+    basic_info.append({
         "key": "exchange_rate",
         "value": rate,
         "source": rate_source,
         "value_type": "float"
     })
-
-    warnings = [f"「{f["key"]}」が抽出できませんでした" for f in fields if f["value"] is None]
 
     # C担当: DBに保存
     session_record = create_session(
@@ -86,17 +85,18 @@ async def process(
         pdf_filename=pdf_file.filename,
         image_filename=image_file.filename,
         merge_strategy="pdf_first",
-        warnings=json.dumps(warnings, ensure_ascii=False),
+        warnings=json.dumps([], ensure_ascii=False),
     )
-    save_fields(db=db, session_id=session_record.id, fields=fields)
+    save_fields(db=db, session_id=session_record.id, fields=basic_info)
 
     return {
         "status": "ok",
         "record_id": session_record.id,
         "pdf": pdf_file.filename,
         "image": image_file.filename,
-        "fields": fields,
-        "warnings": warnings,
+        "basic_info": basic_info,
+        "items": items,
+        "warnings": [],
     }
 
 
@@ -105,12 +105,9 @@ def download_csv(record_id: int, db: Session = Depends(get_db)):
     now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"import_{now}.csv"
     output_path = f"/tmp/{filename}"
-
     export_csv(db=db, record_id=record_id, output_path=output_path)
-
     with open(output_path, "rb") as f:
         content = f.read()
-
     return StreamingResponse(
         io.BytesIO(content),
         media_type="text/csv",
@@ -123,12 +120,9 @@ def download_excel(record_id: int, db: Session = Depends(get_db)):
     now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"import_{now}.xlsx"
     output_path = f"/tmp/{filename}"
-
     export_excel(db=db, record_id=record_id, output_path=output_path)
-
     with open(output_path, "rb") as f:
         content = f.read()
-
     return StreamingResponse(
         io.BytesIO(content),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
