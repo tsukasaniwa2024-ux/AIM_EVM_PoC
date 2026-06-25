@@ -91,6 +91,12 @@ async def process(
         warnings=json.dumps([], ensure_ascii=False),
     )
     save_fields(db=db, session_id=session_record.id, fields=basic_info)
+    # 品目明細に円換算額を追加
+    for item in items:
+        if item.get("amount") is not None:
+            item["amount_jpy"] = round(item["amount"] * rate, 2)
+        else:
+            item["amount_jpy"] = None
     _items_store[session_record.id] = items
 
     return {
