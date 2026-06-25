@@ -255,7 +255,7 @@ async function downloadExport(type) {
 
   try {
     if (mockModeInput.checked) {
-      downloadMockExport(type);
+      await downloadMockExport(type);
       return;
     }
 
@@ -268,21 +268,29 @@ async function downloadExport(type) {
 
     const blob = await res.blob();
     const fileName = getFileNameFromResponse(res) || defaultFileName;
-    downloadBlob(blob, fileName);
+    await saveOrDownloadBlob(blob, fileName, type);
   } catch (error) {
+    if (error.name === 'AbortError') {
+      return;
+    }
+
     console.error(error);
     displayError(`ファイル出力に失敗しました。\n${error.message}`);
   }
 }
 
-function downloadMockExport(type) {
+async function downloadMockExport(type) {
   const header = ['項目名', '値', '抽出元'];
 
   if (type === 'csv') {
     const csv = [header, ...latestRows.map((row) => [row.key, row.value, row.source])]
       .map((row) => row.map(escapeCsvValue).join(','))
       .join('\r\n');
-    downloadBlob(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }), 'mock-export.csv');
+    await saveOrDownloadBlob(
+      new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }),
+      'mock-export.csv',
+      type,
+    );
     return;
   }
 
@@ -290,9 +298,10 @@ function downloadMockExport(type) {
     .map((row) => `<tr>${row.map((value) => `<td>${escapeHtml(String(value ?? ''))}</td>`).join('')}</tr>`)
     .join('');
   const excelHtml = `<html><head><meta charset="UTF-8"></head><body><table>${tableRows}</table></body></html>`;
-  downloadBlob(
+  await saveOrDownloadBlob(
     new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' }),
     'mock-export.xls',
+    type,
   );
 }
 
@@ -312,6 +321,28 @@ function downloadBlob(blob, fileName) {
   a.remove();
 
   URL.revokeObjectURL(url);
+}
+
+async function saveOrDownloadBlob(blob, fileName, type) {
+  if (type === 'csv' && 'showSaveFilePicker' in window) {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: fileName,
+      types: [
+        {
+          description: 'CSVファイル',
+          accept: {
+            'text/csv': ['.csv'],
+          },
+        },
+      ],
+    });
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return;
+  }
+
+  downloadBlob(blob, fileName);
 }
 
 function getFileNameFromResponse(res) {
