@@ -1,53 +1,64 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Form
+from typing import Optional
 
+from services.ocr.base import get_ocr_provider
+from services.extractor import merge
 
-# Router作成
-# APIエンドポイントをここに定義する
 router = APIRouter()
 
 
-
-# 帳票処理API
-#
-# 役割:
-# ・PDF受信
-# ・画像受信
-# ・後続処理(B OCR / C 計算DB出力)へ渡す入口
-#
-# 現時点ではファイル受信確認のみ
 @router.post("/process")
 async def process(
-
-    # PDF帳票ファイル
     pdf_file: UploadFile = File(...),
-
-    # 画像帳票ファイル
-    image_file: UploadFile = File(...)
-
+    image_file: UploadFile = File(...),
+    exchange_rate: Optional[float] = Form(None),
 ):
-
-    # ファイル内容取得
-    # 後でOCR処理へ渡す
     pdf_bytes = await pdf_file.read()
-
     image_bytes = await image_file.read()
 
+    # B担当: OCR抽出
+    ocr = get_ocr_provider()
+    pdf_data = ocr.extract(pdf_bytes, pdf_file.content_type)
+    image_data = ocr.extract(image_bytes, image_file.content_type)
 
-    # 現時点では受信確認のみ
-    # B担当のOCR処理、
-    # C担当の計算・DB保存処理をここへ追加する
+    # B担当: マージ
+    fields = merge(pdf_data, image_data)
+
+    # 為替レートの決定（優先順位: PDF → 画像 → UI入力）
+    rate = None
+    rate_source = None
+
+    for field in fields:
+        if field["key"] == "exchange_rate" and field["value"] is not None:
+            rate = float(field["value"])
+            rate_source = field["source"]
+            break
+
+    if rate is None and exchange_rate is not None:
+        rate = exchange_rate
+        rate_source = "manual"
+
+    if rate is None:
+        return {
+            "status": "error",
+            "message": "為替レートが取得できませんでした。UIから手動入力してください。"
+        }
+
+    # 為替レートをfieldsに追加（上書き）
+    fields = [f for f in fields if f["key"] != "exchange_rate"]
+    fields.append({
+        "key": "exchange_rate",
+        "value": rate,
+        "source": rate_source,
+        "value_type": "float"
+    })
+
+    warnings = [f["key"] for f in fields if f["value"] is None]
+
     return {
-
-        # 処理状態
         "status": "ok",
-
-        # 受け取ったファイル名
         "pdf": pdf_file.filename,
-
         "image": image_file.filename,
-
-        # サイズ確認用
-        "pdf_size": len(pdf_bytes),
-
-        "image_size": len(image_bytes)
+        "fields": fields,
+        "warnings": warnings,
     }
