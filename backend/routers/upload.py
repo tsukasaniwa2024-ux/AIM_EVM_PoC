@@ -64,10 +64,10 @@ async def process(
             break
 
     if rate is None and exchange_rate is not None:
-        if exchange_rate < 1:
+        if exchange_rate < 1 or exchange_rate > 999:
             return {
                 "status": "error",
-                "message": "為替レートは1以上の値を入力してください。"
+                "message": "為替レートは1〜999の範囲で入力してください。"
             }
         rate = exchange_rate
         rate_source = "manual"
