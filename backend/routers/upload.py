@@ -1,17 +1,34 @@
-from fastapi import APIRouter, UploadFile, File, Form
-from fastapi.responses import StreamingResponse
-from typing import Optional
-import csv
-import io
 import datetime
+import io
+import json
+import os
+from typing import Optional
 
+from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
+from db.database import SessionLocal, engine
+from db.crud import create_session, save_fields, get_fields_by_session
+from models.import_session import ImportSession
+from models.import_field import ImportField
 from services.ocr.base import get_ocr_provider
 from services.extractor import merge
+from output.exporter import export_csv, export_excel
 
-# 仮のデータストア（C担当のDB実装後に置き換え）
-_last_result = {}
+# テーブル自動作成
+ImportSession.metadata.create_all(bind=engine)
+ImportField.metadata.create_all(bind=engine)
 
 router = APIRouter()
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 @router.post("/process")
@@ -19,6 +36,7 @@ async def process(
     pdf_file: UploadFile = File(...),
     image_file: UploadFile = File(...),
     exchange_rate: Optional[float] = Form(None),
+    db: Session = Depends(get_db),
 ):
     pdf_bytes = await pdf_file.read()
     image_bytes = await image_file.read()
@@ -51,7 +69,7 @@ async def process(
             "message": "為替レートが取得できませんでした。UIから手動入力してください。"
         }
 
-    # 為替レートをfieldsに追加（上書き）
+    # 為替レートをfieldsに上書き
     fields = [f for f in fields if f["key"] != "exchange_rate"]
     fields.append({
         "key": "exchange_rate",
@@ -62,11 +80,19 @@ async def process(
 
     warnings = [f["key"] for f in fields if f["value"] is None]
 
-    _last_result["fields"] = fields
+    # C担当: DBに保存
+    session_record = create_session(
+        db=db,
+        pdf_filename=pdf_file.filename,
+        image_filename=image_file.filename,
+        merge_strategy="pdf_first",
+        warnings=json.dumps(warnings, ensure_ascii=False),
+    )
+    save_fields(db=db, session_id=session_record.id, fields=fields)
 
     return {
         "status": "ok",
-        "record_id": 1,
+        "record_id": session_record.id,
         "pdf": pdf_file.filename,
         "image": image_file.filename,
         "fields": fields,
@@ -75,45 +101,36 @@ async def process(
 
 
 @router.get("/export/csv/{record_id}")
-async def export_csv(record_id: int):
-    fields = _last_result.get("fields", [])
+def download_csv(record_id: int, db: Session = Depends(get_db)):
     now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"import_{now}.csv"
+    output_path = f"/tmp/{filename}"
 
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["項目名", "値", "抽出元"])
-    for field in fields:
-        writer.writerow([field["key"], field["value"], field["source"]])
+    export_csv(db=db, record_id=record_id, output_path=output_path)
 
-    output.seek(0)
+    with open(output_path, "rb") as f:
+        content = f.read()
+
     return StreamingResponse(
-        iter([output.getvalue()]),
+        io.BytesIO(content),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}
     )
 
 
 @router.get("/export/excel/{record_id}")
-async def export_excel(record_id: int):
-    import openpyxl
-    fields = _last_result.get("fields", [])
+def download_excel(record_id: int, db: Session = Depends(get_db)):
     now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"import_{now}.xlsx"
+    output_path = f"/tmp/{filename}"
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "抽出結果"
-    ws.append(["項目名", "値", "抽出元"])
-    for field in fields:
-        ws.append([field["key"], str(field["value"]), field["source"]])
+    export_excel(db=db, record_id=record_id, output_path=output_path)
 
-    output = io.BytesIO()
-    wb.save(output)
-    output.seek(0)
+    with open(output_path, "rb") as f:
+        content = f.read()
 
     return StreamingResponse(
-        iter([output.getvalue()]),
+        io.BytesIO(content),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}
     )
