@@ -353,22 +353,31 @@ function downloadBlob(blob, fileName) {
 }
 
 async function saveOrDownloadBlob(blob, fileName, type) {
-  if (type === 'csv' && 'showSaveFilePicker' in window) {
-    const handle = await window.showSaveFilePicker({
-      suggestedName: fileName,
-      types: [
-        {
-          description: 'CSVファイル',
-          accept: {
-            'text/csv': ['.csv'],
-          },
-        },
-      ],
-    });
-    const writable = await handle.createWritable();
-    await writable.write(blob);
-    await writable.close();
-    return;
+  if ('showSaveFilePicker' in window) {
+    const fileTypes = {
+      csv: {
+        description: 'CSVファイル',
+        accept: { 'text/csv': ['.csv'] },
+      },
+      excel: {
+        description: 'Excelファイル',
+        accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
+      },
+    };
+
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [fileTypes[type] || fileTypes.csv],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch (err) {
+      // キャンセル時は何もしない
+      if (err.name === 'AbortError') return;
+    }
   }
 
   downloadBlob(blob, fileName);
