@@ -57,6 +57,7 @@ async def process(
 
     return {
         "status": "ok",
+        "record_id": 1,
         "pdf": pdf_file.filename,
         "image": image_file.filename,
         "fields": fields,
