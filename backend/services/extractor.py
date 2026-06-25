@@ -1,10 +1,12 @@
 from typing import Any
 
 
-def merge(pdf_data: dict, image_data: dict, strategy: str = "both") -> dict:
+def merge(pdf_data: dict, image_data: dict, strategy: str = "pdf_first") -> dict:
     """
-    PDFと画像から抽出したデータを合体して返す。
-    同じキーが両方にあっても両方表示する。
+    PDFと画像から抽出したデータをマージして返す。
+    - 両方にあるキー → PDF優先で1行、source: pdf（重複）
+    - PDFにしかないキー → source: pdf
+    - 画像にしかないキー → source: image
     """
     pdf_basic = pdf_data.get("basic_info", {})
     image_basic = image_data.get("basic_info", {})
@@ -12,25 +14,27 @@ def merge(pdf_data: dict, image_data: dict, strategy: str = "both") -> dict:
     image_items = image_data.get("items", [])
 
     basic_info = []
+    all_keys = list(pdf_basic.keys()) + [k for k in image_basic.keys() if k not in pdf_basic]
 
-    # PDFの項目をすべて追加
-    for key, value in pdf_basic.items():
+    for key in all_keys:
+        in_pdf = key in pdf_basic
+        in_image = key in image_basic
+        pdf_val = pdf_basic.get(key)
+        image_val = image_basic.get(key)
+
+        if in_pdf and in_image:
+            value = pdf_val if pdf_val is not None else image_val
+            source = "pdf（重複）"
+        elif in_pdf:
+            value = pdf_val
+            source = "pdf"
+        else:
+            value = image_val
+            source = "image"
+
         if value is None:
             continue
-        basic_info.append({
-            "key": key,
-            "value": value,
-            "source": "pdf",
-            "value_type": _type_name(value),
-        })
 
-    # 画像の項目をすべて追加（PDFと同じキーでも別行で追加）
-    for key, value in image_basic.items():
-        if value is None:
-            continue
-        # PDFに同じキーがあれば source を「image（重複）」にする
-        pdf_keys = {f["key"] for f in basic_info}
-        source = "image（重複）" if key in pdf_keys else "image"
         basic_info.append({
             "key": key,
             "value": value,
