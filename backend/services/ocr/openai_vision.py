@@ -15,10 +15,6 @@ class OpenAIVisionOcr(OcrProvider):
         self.model = "gpt-4o"
 
     def extract(self, file_bytes: bytes, mime_type: str) -> dict:
-        """
-        画像またはPDFからデータを抽出する。
-        PDFは先頭ページを画像に変換してから送信する。
-        """
         if mime_type == "application/pdf":
             image_bytes, image_mime = self._pdf_to_image(file_bytes)
         else:
@@ -27,36 +23,65 @@ class OpenAIVisionOcr(OcrProvider):
         encoded = base64.b64encode(image_bytes).decode("utf-8")
 
         prompt = """
-この帳票画像からすべての情報を抽出してください。
-以下のルールに従ってJSON形式のみで返してください。
+この帳票画像から経理処理に必要な情報のみを抽出してください。
 
-ルール:
-- キー名は英語のスネークケース（例: item_name, unit_price）
-- 数値は文字列ではなく数値型で返す
-- 日付は文字列のままでOK
-- 複数の明細行がある場合は items キーにリスト形式で格納する
-- 抽出できなかった項目はnullにする
+## 抽出ルール
 - JSONのみ返す（説明文・マークダウン不要）
+- キー名は英語のスネークケース
+- 数値は数値型で返す（カンマ区切りは除去）
+- 抽出できない項目はnullにする
 
-出力例:
+## COMMERCIAL INVOICE の場合、以下を抽出
 {
   "document_type": "COMMERCIAL INVOICE",
-  "invoice_no": "IV-250414",
-  "date": "2025/04/15",
-  "shipper": "Sample Shipper Co.,Ltd",
-  "consignee": "Sample Consignee Co.,Ltd",
+  "invoice_no": "...",
+  "date": "...",
+  "shipper": "...",
+  "consignee": "...",
   "items": [
     {
-      "item_no": "A001",
-      "description": "Laptop",
-      "quantity": 5,
-      "unit_price": 100000.0,
-      "amount": 500000.0
+      "item_no": "...",
+      "description": "...",
+      "hs_code": "...",
+      "quantity": 数値,
+      "unit_price": 数値,
+      "amount": 数値
     }
   ],
-  "total_quantity": 15,
-  "total_amount": 1500000.0,
-  "currency": "USD"
+  "total_quantity": 数値,
+  "total_amount": 数値,
+  "currency": "...",
+  "terms_of_payment": "...",
+  "remark": "..."
+}
+
+## PACKING LIST の場合、以下を抽出
+{
+  "document_type": "PACKING LIST",
+  "packing_no": "...",
+  "date": "...",
+  "shipper": "...",
+  "consignee": "...",
+  "items": [
+    {
+      "pkg_no": 数値,
+      "item_no": "...",
+      "description": "...",
+      "quantity_box": 数値,
+      "quantity_piece": 数値,
+      "net_weight": 数値,
+      "gross_weight": 数値,
+      "volume_m3": 数値
+    }
+  ],
+  "total_box": 数値,
+  "total_piece": 数値,
+  "total_net_weight": 数値,
+  "total_gross_weight": 数値,
+  "total_volume_m3": 数値,
+  "country_of_origin": "...",
+  "marks_no": "...",
+  "remark": "..."
 }
 """
 
@@ -81,7 +106,6 @@ class OpenAIVisionOcr(OcrProvider):
 
         raw = response.choices[0].message.content.strip()
 
-        # マークダウンのコードブロックが含まれる場合は除去
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):
@@ -90,7 +114,6 @@ class OpenAIVisionOcr(OcrProvider):
         return json.loads(raw)
 
     def _pdf_to_image(self, pdf_bytes: bytes) -> tuple[bytes, str]:
-        """PDFの先頭ページをPNG画像に変換する"""
         import io
         from pdf2image import convert_from_bytes
 
