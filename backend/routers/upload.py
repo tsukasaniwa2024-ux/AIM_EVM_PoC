@@ -94,9 +94,9 @@ async def process(
     # 品目明細に円換算額を追加
     for item in items:
         if item.get("amount") is not None:
-            item["amount_jpy"] = round(item["amount"] * rate, 2)
+            item["amount(円換算)"] = f"{round(item["amount"] * rate):,}円"
         else:
-            item["amount_jpy"] = None
+            item["amount(円換算)"] = None
     _items_store[session_record.id] = items
 
     return {

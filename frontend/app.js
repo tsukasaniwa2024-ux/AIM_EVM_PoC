@@ -230,7 +230,7 @@ function renderResult(basicInfo, items) {
 
     // 行を動的生成
     itemsBody.innerHTML = items.map(item =>
-      `<tr>${itemKeys.map(k => `<td>${escapeHtml(String(item[k] ?? ''))}</td>`).join('')}</tr>`
+      `<tr>${itemKeys.map(k => `<td>${escapeHtml(formatValue(k, item[k]))}</td>`).join('')}</tr>`
     ).join('');
   } else {
     itemsBody.innerHTML = '<tr><td colspan="11">品目明細なし</td></tr>';
@@ -334,6 +334,19 @@ function getFileNameFromResponse(res) {
   }
 
   return null;
+}
+
+
+// 金額系キーにカンマ区切りを適用
+const AMOUNT_KEYS = ['amount', 'unit_price', 'total_amount', 'total_cny', 'total_jpy', 'import_total_jpy'];
+
+function formatValue(key, value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (AMOUNT_KEYS.some(k => key.toLowerCase().includes(k))) {
+    const num = parseFloat(value);
+    if (!isNaN(num)) return num.toLocaleString();
+  }
+  return String(value);
 }
 
 function escapeHtml(value) {
