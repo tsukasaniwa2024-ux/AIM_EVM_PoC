@@ -3,36 +3,45 @@ from typing import Any
 MERGE_STRATEGY = "pdf_first"
 
 
-def merge(pdf_data: dict, image_data: dict, strategy: str = MERGE_STRATEGY) -> list[dict]:
+def merge(pdf_data: dict, image_data: dict, strategy: str = MERGE_STRATEGY) -> dict:
     """
-    PDFと画像から抽出したデータをマージしてフィールドリストを返す。
-    - itemsリストは展開して個別フィールドとして扱う
-    - nullフィールドは除外する
+    PDFと画像から抽出したデータをマージして返す。
+    戻り値:
+    {
+        "basic_info": [...],  # 基礎情報フィールドリスト
+        "items": [...]        # 品目明細リスト
+    }
     """
-    # itemsを展開してフラットなdictに変換
-    pdf_flat = _flatten(pdf_data, "pdf")
-    image_flat = _flatten(image_data, "image")
+    pdf_basic = pdf_data.get("basic_info", {})
+    image_basic = image_data.get("basic_info", {})
+    pdf_items = pdf_data.get("items", [])
+    image_items = image_data.get("items", [])
 
-    all_keys = set(pdf_flat.keys()) | set(image_flat.keys())
+    # 基礎情報をマージ
+    basic_info = _merge_dict(pdf_basic, image_basic, strategy)
+
+    # 品目はPDF優先、なければ画像を使用
+    items = pdf_items if pdf_items else image_items
+
+    return {
+        "basic_info": basic_info,
+        "items": items,
+    }
+
+
+def _merge_dict(pdf_dict: dict, image_dict: dict, strategy: str) -> list[dict]:
+    all_keys = set(pdf_dict.keys()) | set(image_dict.keys())
     fields = []
 
     for key in sorted(all_keys):
-        in_pdf = key in pdf_flat
-        in_image = key in image_flat
-
-        pdf_val = pdf_flat.get(key)
-        image_val = image_flat.get(key)
+        pdf_val = pdf_dict.get(key)
+        image_val = image_dict.get(key)
+        in_pdf = key in pdf_dict
+        in_image = key in image_dict
 
         if in_pdf and in_image:
-            if strategy == "pdf_first":
-                value = pdf_val if pdf_val is not None else image_val
-                source = "pdf（重複）"
-            elif strategy == "image_first":
-                value = image_val if image_val is not None else pdf_val
-                source = "image（重複）"
-            else:
-                value = pdf_val
-                source = "pdf（重複）"
+            value = pdf_val if pdf_val is not None else image_val
+            source = "pdf（重複）"
         elif in_pdf:
             value = pdf_val
             source = "pdf"
@@ -40,7 +49,6 @@ def merge(pdf_data: dict, image_data: dict, strategy: str = MERGE_STRATEGY) -> l
             value = image_val
             source = "image"
 
-        # nullは除外
         if value is None:
             continue
 
@@ -52,25 +60,6 @@ def merge(pdf_data: dict, image_data: dict, strategy: str = MERGE_STRATEGY) -> l
         })
 
     return fields
-
-
-def _flatten(data: dict, source: str) -> dict:
-    """
-    ネストされたdictをフラットに展開する。
-    itemsリストは items_0_key, items_1_key 形式に展開。
-    """
-    result = {}
-
-    for key, value in data.items():
-        if key == "items" and isinstance(value, list):
-            for i, item in enumerate(value):
-                if isinstance(item, dict):
-                    for sub_key, sub_val in item.items():
-                        result[f"item_{i+1}_{sub_key}"] = sub_val
-        else:
-            result[key] = value
-
-    return result
 
 
 def _type_name(value: Any) -> str:

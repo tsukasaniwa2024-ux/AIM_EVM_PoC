@@ -311,3 +311,20 @@ th {
   font-size: 0.9rem;
   color: #555;
 }
+
+/* 上部・下部セクション */
+h3 {
+  font-size: 1rem;
+  color: #1a1a2e;
+  margin: 20px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid #4f46e5;
+}
+
+#items-area {
+  overflow-x: auto;
+}
+
+#items-table {
+  min-width: 800px;
+}

@@ -6,8 +6,9 @@ const imageFileInput = document.getElementById('image-file');
 const runBtn = document.getElementById('run-btn');
 const loading = document.getElementById('loading');
 const warnings = document.getElementById('warnings');
-const resultTable = document.getElementById('result-table');
-const resultBody = document.getElementById('result-body');
+const resultArea = document.getElementById('result-area');
+const basicBody = document.getElementById('basic-body');
+const itemsBody = document.getElementById('items-body');
 const csvBtn = document.getElementById('csv-btn');
 const excelBtn = document.getElementById('excel-btn');
 const mockModeInput = document.getElementById('mock-mode');
@@ -143,7 +144,7 @@ async function runProcess() {
     recordId = data.record_id;
 
     showWarnings(data.warnings || []);
-    renderResultTable(data.fields || [], data.calculations || []);
+    renderResult(data.basic_info || [], data.items || []);
 
     csvBtn.disabled = !recordId;
     excelBtn.disabled = !recordId;
@@ -206,8 +207,9 @@ function setLoading(isLoading) {
 function resetResult() {
   recordId = null;
   latestRows = [];
-  resultBody.innerHTML = '';
-  resultTable.classList.add('hidden');
+  basicBody.innerHTML = '';
+  itemsBody.innerHTML = '';
+  resultArea.classList.add('hidden');
   warnings.classList.add('hidden');
   warnings.innerHTML = '';
   clearError();
@@ -239,38 +241,38 @@ function showWarnings(warningList) {
   warnings.classList.remove('hidden');
 }
 
-function renderResultTable(fields, calculations) {
-  const rows = [];
-
-  fields.forEach((field) => {
-    rows.push({
-      key: field.key,
-      value: field.value,
-      source: field.source,
-    });
-  });
-
-  calculations.forEach((calculation) => {
-    rows.push({
-      key: calculation.key,
-      value: calculation.value,
-      source: 'calculated',
-    });
-  });
-
-  latestRows = rows;
-
-  resultBody.innerHTML = rows
+function renderResult(basicInfo, items) {
+  // 上部：基礎情報
+  basicBody.innerHTML = basicInfo
     .map((row) => `
       <tr>
         <td>${escapeHtml(String(row.key ?? ''))}</td>
         <td>${escapeHtml(String(row.value ?? ''))}</td>
         <td>${escapeHtml(String(row.source ?? ''))}</td>
       </tr>
-    `)
-    .join('');
+    `).join('');
 
-  resultTable.classList.toggle('hidden', rows.length === 0);
+  // 下部：品目明細
+  itemsBody.innerHTML = items.map((item) => `
+    <tr>
+      <td>${escapeHtml(String(item.item_no ?? ''))}</td>
+      <td>${escapeHtml(String(item.description ?? ''))}</td>
+      <td>${escapeHtml(String(item.hs_code ?? ''))}</td>
+      <td>${escapeHtml(String(item.quantity ?? ''))}</td>
+      <td>${escapeHtml(String(item.unit_price ?? ''))}</td>
+      <td>${escapeHtml(String(item.amount ?? ''))}</td>
+      <td>${escapeHtml(String(item.quantity_box ?? ''))}</td>
+      <td>${escapeHtml(String(item.quantity_piece ?? ''))}</td>
+      <td>${escapeHtml(String(item.net_weight ?? ''))}</td>
+      <td>${escapeHtml(String(item.gross_weight ?? ''))}</td>
+      <td>${escapeHtml(String(item.volume_m3 ?? ''))}</td>
+    </tr>
+  `).join('');
+
+  resultArea.classList.remove('hidden');
+
+  // モックのlatestRows互換
+  latestRows = basicInfo.map(r => ({ key: r.key, value: r.value, source: r.source }));
 }
 
 async function downloadExport(type) {

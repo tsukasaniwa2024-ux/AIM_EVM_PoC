@@ -72,19 +72,45 @@
     </section>
 
     <section class="card result-area">
-      <h2>計算結果プレビュー</h2>
+      <h2>抽出結果プレビュー</h2>
 
-      <table id="result-table" class="hidden">
-        <caption class="visually-hidden">OCR解析と計算の結果</caption>
-        <thead>
-          <tr>
-            <th>項目名</th>
-            <th>値</th>
-            <th>抽出元</th>
-          </tr>
-        </thead>
-        <tbody id="result-body"></tbody>
-      </table>
+      <div id="result-area" class="hidden">
+        <!-- 上部：基礎情報 -->
+        <h3>基礎情報</h3>
+        <table id="basic-table">
+          <thead>
+            <tr>
+              <th>項目名</th>
+              <th>値</th>
+              <th>抽出元</th>
+            </tr>
+          </thead>
+          <tbody id="basic-body"></tbody>
+        </table>
+
+        <!-- 下部：品目明細 -->
+        <h3>品目明細</h3>
+        <div id="items-area">
+          <table id="items-table">
+            <thead>
+              <tr>
+                <th>品番</th>
+                <th>品名</th>
+                <th>HSコード</th>
+                <th>数量</th>
+                <th>単価</th>
+                <th>金額</th>
+                <th>梱包(Box)</th>
+                <th>梱包(Piece)</th>
+                <th>N/W</th>
+                <th>G/W</th>
+                <th>体積(M3)</th>
+              </tr>
+            </thead>
+            <tbody id="items-body"></tbody>
+          </table>
+        </div>
+      </div>
 
       <div class="button-area export-buttons">
         <button id="csv-btn" disabled>CSVで出力</button>
