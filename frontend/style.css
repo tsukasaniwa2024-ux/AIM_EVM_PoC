@@ -43,28 +43,6 @@ h1 {
   margin-bottom: 18px;
 }
 
-.mock-mode {
-  margin-bottom: 22px;
-  padding: 14px;
-  border: 1px solid #93c5fd;
-  border-radius: 8px;
-  background: #eff6ff;
-  color: #1e3a8a;
-}
-
-.mock-mode label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  cursor: pointer;
-}
-
-.mock-mode p {
-  margin: 8px 0 0 24px;
-  font-size: 13px;
-}
-
 label {
   display: block;
   margin-bottom: 8px;

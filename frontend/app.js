@@ -1,5 +1,4 @@
 const API_BASE = '';
-const MOCK_DELAY_MS = 1000;
 
 const pdfFileInput = document.getElementById('pdf-file');
 const imageFileInput = document.getElementById('image-file');
@@ -10,7 +9,6 @@ const resultTable = document.getElementById('result-table');
 const resultBody = document.getElementById('result-body');
 const csvBtn = document.getElementById('csv-btn');
 const excelBtn = document.getElementById('excel-btn');
-const mockModeInput = document.getElementById('mock-mode');
 const pdfDropZone = document.getElementById('pdf-drop-zone');
 const imageDropZone = document.getElementById('image-drop-zone');
 const pdfFileName = document.getElementById('pdf-file-name');
@@ -30,7 +28,6 @@ imageFileInput.addEventListener('change', () => handleFileChange(imageFileInput,
 runBtn.addEventListener('click', runProcess);
 csvBtn.addEventListener('click', () => downloadExport('csv'));
 excelBtn.addEventListener('click', () => downloadExport('excel'));
-mockModeInput.addEventListener('change', resetResult);
 
 setupDropZone(pdfDropZone, pdfFileInput, pdfFileName, 'pdf');
 setupDropZone(imageDropZone, imageFileInput, imageFileName, 'image');
@@ -131,9 +128,7 @@ async function runProcess() {
   }
 
   try {
-    const data = mockModeInput.checked
-      ? await runMockProcess(pdfFile, imageFile)
-      : await requestProcess(formData);
+    const data = await requestProcess(formData);
 
     if (data.status === 'error') {
       displayError(data.message);
@@ -168,33 +163,6 @@ async function requestProcess(formData) {
   }
 
   return res.json();
-}
-
-async function runMockProcess(pdfFile, imageFile) {
-  await delay(MOCK_DELAY_MS);
-
-  return {
-    record_id: `mock-${Date.now()}`,
-    status: 'ok',
-    warnings: ['モックデータを表示しています。実際のOCR処理は行われていません。'],
-    fields: [
-      { key: 'pdf_file_name', value: pdfFile.name, source: 'pdf' },
-      { key: 'image_file_name', value: imageFile.name, source: 'image' },
-      { key: 'item_name', value: 'サンプル商品', source: 'pdf' },
-      { key: 'quantity', value: 100, source: 'image' },
-      { key: 'unit_price_cny', value: 50, source: 'pdf' },
-      { key: 'exchange_rate', value: 20.5, source: 'pdf' },
-    ],
-    calculations: [
-      { key: 'total_cny', value: 5000, formula: 'quantity * unit_price_cny' },
-      { key: 'total_jpy', value: 102500, formula: 'total_cny * exchange_rate' },
-      { key: 'import_total_jpy', value: 110625, formula: 'total_jpy + shipping_jpy + tariff_jpy' },
-    ],
-  };
-}
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function setLoading(isLoading) {
@@ -283,11 +251,6 @@ async function downloadExport(type) {
   const defaultFileName = type === 'excel' ? 'export.xlsx' : 'export.csv';
 
   try {
-    if (mockModeInput.checked) {
-      await downloadMockExport(type);
-      return;
-    }
-
     const res = await fetch(`${API_BASE}/api/export/${endpoint}/${recordId}`);
 
     if (!res.ok) {
@@ -306,37 +269,6 @@ async function downloadExport(type) {
     console.error(error);
     displayError(`ファイル出力に失敗しました。\n${error.message}`);
   }
-}
-
-async function downloadMockExport(type) {
-  const header = ['項目名', '値', '抽出元'];
-
-  if (type === 'csv') {
-    const csv = [header, ...latestRows.map((row) => [row.key, row.value, row.source])]
-      .map((row) => row.map(escapeCsvValue).join(','))
-      .join('\r\n');
-    await saveOrDownloadBlob(
-      new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }),
-      'mock-export.csv',
-      type,
-    );
-    return;
-  }
-
-  const tableRows = [header, ...latestRows.map((row) => [row.key, row.value, row.source])]
-    .map((row) => `<tr>${row.map((value) => `<td>${escapeHtml(String(value ?? ''))}</td>`).join('')}</tr>`)
-    .join('');
-  const excelHtml = `<html><head><meta charset="UTF-8"></head><body><table>${tableRows}</table></body></html>`;
-  await saveOrDownloadBlob(
-    new Blob([excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' }),
-    'mock-export.xls',
-    type,
-  );
-}
-
-function escapeCsvValue(value) {
-  const text = String(value ?? '');
-  return `"${text.replace(/"/g, '""')}"`;
 }
 
 function downloadBlob(blob, fileName) {
