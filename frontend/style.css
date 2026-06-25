@@ -277,3 +277,37 @@ th {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* 為替レート */
+.radio-group {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 8px;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+#rate-manual-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#exchange-rate {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 120px;
+  font-size: 0.95rem;
+}
+
+.unit {
+  font-size: 0.9rem;
+  color: #555;
+}

@@ -17,6 +17,10 @@ const pdfFileName = document.getElementById('pdf-file-name');
 const imageFileName = document.getElementById('image-file-name');
 const errorMessage = document.getElementById('error-message');
 const processCard = document.getElementById('process-card');
+const rateAuto = document.getElementById('rate-auto');
+const rateManual = document.getElementById('rate-manual');
+const rateManualInput = document.getElementById('rate-manual-input');
+const exchangeRateInput = document.getElementById('exchange-rate');
 
 let recordId = null;
 let latestRows = [];
@@ -30,6 +34,13 @@ mockModeInput.addEventListener('change', resetResult);
 
 setupDropZone(pdfDropZone, pdfFileInput, pdfFileName, 'pdf');
 setupDropZone(imageDropZone, imageFileInput, imageFileName, 'image');
+
+// 為替レートモード切り替え
+[rateAuto, rateManual].forEach(radio => {
+  radio.addEventListener('change', () => {
+    rateManualInput.classList.toggle('hidden', rateAuto.checked);
+  });
+});
 
 function handleFileChange(input, fileNameElement) {
   fileNameElement.textContent = input.files[0]?.name || '選択されていません';
@@ -107,10 +118,28 @@ async function runProcess() {
   formData.append('pdf_file', pdfFile);
   formData.append('image_file', imageFile);
 
+  // 手動入力モードの場合は為替レートを追加
+  if (rateManual.checked) {
+    const rate = exchangeRateInput.value;
+    if (!rate) {
+      displayError('為替レートを入力してください。');
+      setLoading(false);
+      validateFileSelection();
+      return;
+    }
+    formData.append('exchange_rate', rate);
+  }
+
   try {
     const data = mockModeInput.checked
       ? await runMockProcess(pdfFile, imageFile)
       : await requestProcess(formData);
+
+    if (data.status === 'error') {
+      displayError(data.message);
+      return;
+    }
+
     recordId = data.record_id;
 
     showWarnings(data.warnings || []);
