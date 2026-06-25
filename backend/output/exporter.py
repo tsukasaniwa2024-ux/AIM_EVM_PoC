@@ -10,58 +10,28 @@ def export_csv(
     db: Session,
     record_id: int,
     output_path: str,
+    items: list[dict] = [],
 ) -> str:
-    """
-    record_idからDBのデータを取得しCSV出力する
+    fields = get_fields_by_session(db=db, session_id=record_id)
 
-    Parameters
-    ----------
-    db : Session
-        DBセッション
+    # 基礎情報（value_type・formulaは除外）
+    basic_rows = [
+        {"項目名": f.key, "値": f.value, "抽出元": f.source}
+        for f in fields
+    ]
 
-    record_id : int
-        import_sessions.id
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
-    output_path : str
-        出力先パス
+    with open(output_path, "w", encoding="utf-8-sig", newline="") as fp:
+        # 基礎情報セクション
+        df_basic = pd.DataFrame(basic_rows)
+        fp.write("【基礎情報】\n")
+        df_basic.to_csv(fp, index=False)
 
-    Returns
-    -------
-    str
-        出力ファイルパス
-    """
-
-    fields = get_fields_by_session(
-        db=db,
-        session_id=record_id,
-    )
-
-    rows = []
-
-    for field in fields:
-        rows.append(
-            {
-                "key": field.key,
-                "value": field.value,
-                "value_type": field.value_type,
-                "source": field.source,
-                "formula": field.formula,
-            }
-        )
-
-    df = pd.DataFrame(rows)
-
-    Path(output_path).parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    # Excelで文字化けしないようBOM付きUTF-8で出力
-    df.to_csv(
-        output_path,
-        index=False,
-        encoding="utf-8-sig",
-    )
+        if items:
+            fp.write("\n【品目明細】\n")
+            df_items = pd.DataFrame(items)
+            df_items.to_csv(fp, index=False)
 
     return output_path
 
@@ -70,57 +40,25 @@ def export_excel(
     db: Session,
     record_id: int,
     output_path: str,
+    items: list[dict] = [],
 ) -> str:
-    """
-    record_idからDBのデータを取得しExcel出力する
+    fields = get_fields_by_session(db=db, session_id=record_id)
 
-    Parameters
-    ----------
-    db : Session
-        DBセッション
+    basic_rows = [
+        {"項目名": f.key, "値": f.value, "抽出元": f.source}
+        for f in fields
+    ]
 
-    record_id : int
-        import_sessions.id
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
-    output_path : str
-        出力先パス
+    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+        # 基礎情報シート
+        df_basic = pd.DataFrame(basic_rows)
+        df_basic.to_excel(writer, sheet_name="基礎情報", index=False)
 
-    Returns
-    -------
-    str
-        出力ファイルパス
-    """
-
-    fields = get_fields_by_session(
-        db=db,
-        session_id=record_id,
-    )
-
-    rows = []
-
-    for field in fields:
-        rows.append(
-            {
-                "key": field.key,
-                "value": field.value,
-                "value_type": field.value_type,
-                "source": field.source,
-                "formula": field.formula,
-            }
-        )
-
-    df = pd.DataFrame(rows)
-
-    Path(output_path).parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    # openpyxlを利用してxlsx出力
-    df.to_excel(
-        output_path,
-        index=False,
-        engine="openpyxl",
-    )
+        # 品目明細シート
+        if items:
+            df_items = pd.DataFrame(items)
+            df_items.to_excel(writer, sheet_name="品目明細", index=False)
 
     return output_path

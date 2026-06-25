@@ -21,6 +21,9 @@ ImportField.metadata.create_all(bind=engine)
 
 router = APIRouter()
 
+# items一時保存（record_id → items）
+_items_store: dict[int, list[dict]] = {}
+
 
 def get_db():
     db = SessionLocal()
@@ -88,6 +91,7 @@ async def process(
         warnings=json.dumps([], ensure_ascii=False),
     )
     save_fields(db=db, session_id=session_record.id, fields=basic_info)
+    _items_store[session_record.id] = items
 
     return {
         "status": "ok",
@@ -105,7 +109,8 @@ def download_csv(record_id: int, db: Session = Depends(get_db)):
     now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"import_{now}.csv"
     output_path = f"/tmp/{filename}"
-    export_csv(db=db, record_id=record_id, output_path=output_path)
+    items = _items_store.get(record_id, [])
+    export_csv(db=db, record_id=record_id, output_path=output_path, items=items)
     with open(output_path, "rb") as f:
         content = f.read()
     return StreamingResponse(
@@ -120,7 +125,8 @@ def download_excel(record_id: int, db: Session = Depends(get_db)):
     now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"import_{now}.xlsx"
     output_path = f"/tmp/{filename}"
-    export_excel(db=db, record_id=record_id, output_path=output_path)
+    items = _items_store.get(record_id, [])
+    export_excel(db=db, record_id=record_id, output_path=output_path, items=items)
     with open(output_path, "rb") as f:
         content = f.read()
     return StreamingResponse(
