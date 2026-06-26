@@ -39,6 +39,13 @@ echo Building exe... (this may take a few minutes)
     --hidden-import uvicorn.lifespan ^
     --hidden-import uvicorn.lifespan.on ^
     --hidden-import fastapi ^
+    --hidden-import fastapi.staticfiles ^
+    --hidden-import fastapi.responses ^
+    --hidden-import fastapi.middleware ^
+    --hidden-import fastapi.middleware.cors ^
+    --hidden-import starlette ^
+    --hidden-import starlette.staticfiles ^
+    --hidden-import starlette.responses ^
     --hidden-import sqlalchemy ^
     --hidden-import openai ^
     --hidden-import pdf2image ^
