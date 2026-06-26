@@ -1,13 +1,11 @@
 """
 AIM EVM 輸入帳票自動化システム 起動スクリプト
-exe化後のエントリーポイント
 """
 import os
 import sys
 import time
 import threading
 import webbrowser
-import subprocess
 
 # exeとして実行されている場合のパス解決
 if getattr(sys, 'frozen', False):
@@ -17,7 +15,6 @@ else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     APP_DIR = BASE_DIR
 
-# backendとfrontendのパスを設定
 BACKEND_DIR = os.path.join(BASE_DIR, "backend")
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 ENV_FILE = os.path.join(APP_DIR, ".env")
@@ -34,7 +31,7 @@ def load_env():
 
 load_env()
 
-# フロントエンドのパスを環境変数で渡す
+# frontendのパスを環境変数で渡す（main.pyで参照）
 os.environ["FRONTEND_DIR"] = FRONTEND_DIR
 
 # backendをパスに追加
@@ -45,7 +42,6 @@ URL = f"http://localhost:{PORT}"
 
 
 def open_browser():
-    """サーバー起動後にブラウザを開く"""
     time.sleep(2)
     webbrowser.open(URL)
 
@@ -58,10 +54,8 @@ def main():
     print(f"ブラウザで {URL} を開きます\n")
     print("終了するには このウィンドウを閉じてください\n")
 
-    # ブラウザを別スレッドで開く
     threading.Thread(target=open_browser, daemon=True).start()
 
-    # uvicornでFastAPIを起動
     import uvicorn
     uvicorn.run(
         "main:app",
