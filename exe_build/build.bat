@@ -1,31 +1,28 @@
 @echo off
+chcp 65001 > nul
 echo ================================
-echo  AIM EVM exe ビルドスクリプト
+echo  AIM EVM exe Build Script
 echo ================================
 echo.
 
-:: Pythonの確認
 python --version > nul 2>&1
 if errorlevel 1 (
-    echo [エラー] Pythonがインストールされていません。
-    echo https://www.python.org/downloads/ からインストールしてください。
+    echo [ERROR] Python is not installed.
+    echo Please install from https://www.python.org/downloads/
     pause
     exit /b 1
 )
 
-:: pipの確認・PyInstallerインストール
-echo PyInstallerをインストールしています...
+echo Installing PyInstaller...
 pip install pyinstaller > nul 2>&1
 
-:: backendの依存関係インストール
-echo 依存ライブラリをインストールしています...
+echo Installing dependencies...
 pip install -r ..\backend\requirements.txt > nul 2>&1
 
-:: exe化実行
 echo.
-echo exe化を開始します（数分かかります）...
+echo Building exe... (this may take a few minutes)
 pyinstaller ^
-    --name "EVM輸入帳票自動化ツール" ^
+    --name "EVM_Import_Tool" ^
     --onefile ^
     --console ^
     --add-data "..\backend;backend" ^
@@ -48,17 +45,17 @@ pyinstaller ^
     launcher.py
 
 echo.
-if exist dist\EVM輸入帳票自動化ツール.exe (
+if exist dist\EVM_Import_Tool.exe (
     echo ================================
-    echo  ビルド成功！
-    echo  dist\EVM輸入帳票自動化ツール.exe が作成されました
+    echo  Build successful!
+    echo  dist\EVM_Import_Tool.exe created
     echo ================================
     echo.
-    echo 配布するファイル：
-    echo   - dist\EVM輸入帳票自動化ツール.exe
-    echo   - .env.example を .env にリネームして同じフォルダに配置
+    echo Files to distribute:
+    echo   - dist\EVM_Import_Tool.exe
+    echo   - .env (rename from .env.example and set API key)
 ) else (
-    echo [エラー] ビルドに失敗しました。
+    echo [ERROR] Build failed.
 )
 
 pause
