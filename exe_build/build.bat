@@ -51,6 +51,7 @@ echo Building exe... (this may take a few minutes)
     --hidden-import pdf2image ^
     --hidden-import openpyxl ^
     --hidden-import pandas ^
+    --add-data "poppler;poppler" ^
     launcher.py
 
 echo.

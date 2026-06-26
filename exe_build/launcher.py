@@ -34,6 +34,11 @@ load_env()
 # frontendのパスを環境変数で渡す（main.pyで参照）
 os.environ["FRONTEND_DIR"] = FRONTEND_DIR
 
+# popplerのパスを設定
+POPPLER_DIR = os.path.join(BASE_DIR, "poppler", "Library", "bin")
+if os.path.exists(POPPLER_DIR):
+    os.environ["PATH"] = POPPLER_DIR + os.pathsep + os.environ.get("PATH", "")
+
 # backendをパスに追加
 sys.path.insert(0, BACKEND_DIR)
 
