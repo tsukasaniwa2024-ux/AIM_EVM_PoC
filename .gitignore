@@ -18,3 +18,10 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# exe build outputs
+exe_build/dist/
+exe_build/build/
+exe_build/*.spec
+exe_build/poppler/
+*.exe
