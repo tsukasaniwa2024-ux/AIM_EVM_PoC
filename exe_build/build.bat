@@ -5,23 +5,25 @@ echo  AIM EVM exe Build Script
 echo ================================
 echo.
 
-python --version > nul 2>&1
+:: Python path
+set PYTHON=C:\Users\happy\AppData\Local\Python\pythoncore-3.14-64\python.exe
+
+%PYTHON% --version > nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Python is not installed.
-    echo Please install from https://www.python.org/downloads/
+    echo [ERROR] Python not found at %PYTHON%
     pause
     exit /b 1
 )
 
 echo Installing PyInstaller...
-pip install pyinstaller > nul 2>&1
+%PYTHON% -m pip install pyinstaller > nul 2>&1
 
 echo Installing dependencies...
-pip install -r ..\backend\requirements.txt > nul 2>&1
+%PYTHON% -m pip install -r ..\backend\requirements.txt > nul 2>&1
 
 echo.
 echo Building exe... (this may take a few minutes)
-pyinstaller ^
+%PYTHON% -m PyInstaller ^
     --name "EVM_Import_Tool" ^
     --onefile ^
     --console ^
@@ -50,10 +52,6 @@ if exist dist\EVM_Import_Tool.exe (
     echo  Build successful!
     echo  dist\EVM_Import_Tool.exe created
     echo ================================
-    echo.
-    echo Files to distribute:
-    echo   - dist\EVM_Import_Tool.exe
-    echo   - .env (rename from .env.example and set API key)
 ) else (
     echo [ERROR] Build failed.
 )
