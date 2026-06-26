@@ -25,7 +25,7 @@ pip install -r ..\backend\requirements.txt > nul 2>&1
 echo.
 echo exe化を開始します（数分かかります）...
 pyinstaller ^
-    --name "AIM_EVM" ^
+    --name "EVM輸入帳票自動化ツール" ^
     --onefile ^
     --console ^
     --add-data "..\backend;backend" ^
@@ -48,14 +48,14 @@ pyinstaller ^
     launcher.py
 
 echo.
-if exist dist\AIM_EVM.exe (
+if exist dist\EVM輸入帳票自動化ツール.exe (
     echo ================================
     echo  ビルド成功！
-    echo  dist\AIM_EVM.exe が作成されました
+    echo  dist\EVM輸入帳票自動化ツール.exe が作成されました
     echo ================================
     echo.
     echo 配布するファイル：
-    echo   - dist\AIM_EVM.exe
+    echo   - dist\EVM輸入帳票自動化ツール.exe
     echo   - .env.example を .env にリネームして同じフォルダに配置
 ) else (
     echo [エラー] ビルドに失敗しました。
