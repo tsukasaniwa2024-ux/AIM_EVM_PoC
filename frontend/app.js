@@ -1,4 +1,5 @@
 const API_BASE = '';
+const MAX_PDF_PAGES = 10;
 
 const pdfFileInput = document.getElementById('pdf-file');
 const imageFileInput = document.getElementById('image-file');
@@ -23,6 +24,9 @@ const exchangeRateInput = document.getElementById('exchange-rate');
 
 let recordId = null;
 let latestRows = [];
+let isPdfPageCountValid = true;
+let pdfValidationToken = 0;
+let pdfPageErrorMessage = '';
 
 pdfFileInput.addEventListener('change', () => handleFileChange(pdfFileInput, pdfFileName));
 imageFileInput.addEventListener('change', () => handleFileChange(imageFileInput, imageFileName));
@@ -40,9 +44,18 @@ setupDropZone(imageDropZone, imageFileInput, imageFileName, 'image');
   });
 });
 
-function handleFileChange(input, fileNameElement) {
+async function handleFileChange(input, fileNameElement) {
   fileNameElement.textContent = input.files[0]?.name || '選択されていません';
-  clearError();
+
+  if (input === pdfFileInput) {
+    clearError();
+    await validatePdfPageCount(input.files[0]);
+  } else if (!pdfPageErrorMessage) {
+    clearError();
+  } else {
+    displayError(pdfPageErrorMessage);
+  }
+
   validateFileSelection();
 }
 
@@ -97,7 +110,50 @@ function validateFileSelection() {
   const hasPdf = pdfFileInput.files.length > 0;
   const hasImage = imageFileInput.files.length > 0;
 
-  runBtn.disabled = !(hasPdf && hasImage);
+  runBtn.disabled = !(hasPdf && hasImage && isPdfPageCountValid);
+}
+
+async function validatePdfPageCount(file) {
+  const token = ++pdfValidationToken;
+  isPdfPageCountValid = false;
+  validateFileSelection();
+
+  if (!file) {
+    isPdfPageCountValid = true;
+    pdfPageErrorMessage = '';
+    return;
+  }
+
+  try {
+    const pageCount = await countPdfPages(file);
+
+    if (token !== pdfValidationToken) {
+      return;
+    }
+
+    if (pageCount > MAX_PDF_PAGES) {
+      isPdfPageCountValid = false;
+      pdfPageErrorMessage = `PDFは${MAX_PDF_PAGES}ページ以内にしてください。現在のPDFは${pageCount}ページです。`;
+      displayError(pdfPageErrorMessage);
+      return;
+    }
+
+    isPdfPageCountValid = true;
+    pdfPageErrorMessage = '';
+  } catch (error) {
+    console.error(error);
+    isPdfPageCountValid = false;
+    pdfPageErrorMessage = 'PDFのページ数を確認できませんでした。別のPDFを選択してください。';
+    displayError(pdfPageErrorMessage);
+  }
+}
+
+async function countPdfPages(file) {
+  const buffer = await file.arrayBuffer();
+  const text = new TextDecoder('latin1').decode(buffer);
+  const matches = text.match(/\/Type\s*\/Page\b/g);
+
+  return matches ? matches.length : 0;
 }
 
 async function runProcess() {
@@ -106,6 +162,11 @@ async function runProcess() {
 
   if (!pdfFile || !imageFile) {
     displayError('PDFファイルと画像ファイルの両方を選択してください。');
+    return;
+  }
+
+  if (!isPdfPageCountValid) {
+    displayError(`PDFは${MAX_PDF_PAGES}ページ以内にしてください。`);
     return;
   }
 
